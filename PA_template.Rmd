@@ -1,0 +1,113 @@
+---
+title: "PA1_template.Rmd"
+author: "NB"
+date: "Friday, April 17, 2015"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+Loading and preprocessing the data
+
+```{r}
+#code visibility
+echo = TRUE  
+
+#unzipping and reading of data
+
+unzip("activity.zip")
+x <- read.csv("activity.csv", colClasses = c("integer", "Date", "factor"))
+x$month <- as.numeric(format(x$date, "%m"))
+noNA <- na.omit(x)
+rownames(noNA) <- 1:nrow(noNA)
+head(noNA)
+dim(noNA)
+library(ggplot2)
+
+```
+
+What is mean total number of steps taken per day?
+
+Histogram representation
+```{r}
+ggplot(noNA, aes(date, steps)) + geom_bar(stat = "identity", colour = "black", fill = "black", width = 0.7) + facet_grid(. ~ month, scales = "free") + labs(title = "Total no of steps taken everyday", x = "Date", y = "Total number of steps")
+```
+
+Mean and Median
+```{r}
+totalSteps <- aggregate(noNA$steps, list(Date = noNA$date), FUN = "sum")$x
+mean(totalSteps)
+median(totalSteps)
+```
+
+What is the average daily activity pattern?
+
+```{r}
+#average calculation
+avgstp <- aggregate(noNA$steps, list(interval = as.numeric(as.character(noNA$interval))), FUN = "mean")
+names(avgstp)[2] <- "meanstps"
+#plot of 5 min time intervals
+ggplot(avgstp, aes(interval, meanstps)) + geom_line(color = "black", size = 0.8) + labs(title = "Plot of the time Interval", x = "5 min intervals", y = "Avg no of steps taken")
+
+#average no of mean steps
+avgstp[avgstp$meanstps == max(avgstp$eanstps), ]
+```
+
+Inputing missing Values
+
+```{r}
+#total number of NA rows
+sum(is.na(x))
+
+#filling in of data set with missging data filled in
+newdataY <- x
+for (i in 1:nrow(newdataY)) {
+  if (is.na(newdataY$steps[i])) {
+    newdataY$steps[i] <- avgstp[which(newdataY$interval[i] == avgstp$interval), ]$meanstps}
+  }
+head(newdataY) # displays values while next statement verifies that there are no missing values
+sum(is.na(newdataY))
+
+#plotting of a histogram for mean and median steps each day
+ggplot(newdataY, aes(date, steps)) + geom_bar(stat = "identity",colour = "black",fill = "black",width = 0.7) + facet_grid(. ~ month, scales = "free") + labs(title = "Total no of steps everday (excluding missing data)", x = "Date", y = "Total no of steps")
+
+#mean total steps
+newTotalStps <- aggregate(newdataY$steps, list(Date = newdataY$date), FUN = "sum")$x
+MeanY <- mean(newTotalStps)
+MeanY
+#median total steps
+MedianY <- median(newTotalStps)
+MedianY
+
+#comparision of both values before and after missing data
+MeanX <- mean(totalSteps)
+MedianX <- median(totalSteps)
+MeanY - MeanX
+MedianY - MedianX
+```
+
+Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+#creating new factor levels to distinguish between weekday and weekend
+head(newdataY)
+newdataY$weekdays <- factor(format(newdataY$date, "%A"))
+levels(newdataY$weekdays) <- list(weekday = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday"), weekend = c("Saturday", "Sunday"))
+levels(newdataY$weekdays) 
+table(newdataY$weekdays)
+
+#average  no of steps taken across weekdays and weekends
+avgstp <- aggregate(newdataY$steps, list(interval = as.numeric(as.character(newdataY$interval)), weekdays = newdataY$weekdays), FUN = "mean")
+names(avgstp)[3] <- "meanstps"
+library(lattice)
+ xyplot(avgstp$meanstps ~ avgstp$interval | avgstp$weekdays, layout = c(1, 2), type = "l", xlab = "Interval", ylab = "No. of steps")
+```
+
+End
+
+
+
+
+
